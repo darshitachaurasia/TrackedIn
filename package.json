@@ -1,0 +1,24 @@
+{
+  "name": "workspace",
+  "version": "1.0.0",
+  "description": "<!-- Banner --> <p align=\"center\">   <img src=\"https://imgur.com/YOUR_CUSTOM_BANNER.png\" alt=\"TrackedIn Banner\" width=\"100%\" /> </p>",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@clerk/clerk-react": "^5.35.3",
+    "@heroicons/react": "^2.2.0",
+    "axios": "^1.11.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.0",
+    "lucide-react": "^0.525.0",
+    "mongodb": "^6.18.0",
+    "mongoose": "^8.16.4",
+    "openai": "^5.10.2",
+    "react-router-dom": "^7.7.0"
+  }
+}
