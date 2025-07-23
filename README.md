@@ -1,6 +1,6 @@
 <!-- Banner -->
 <p align="center">
-  <img src="https://imgur.com/YOUR_CUSTOM_BANNER.png" alt="TrackedIn Banner" width="100%" />
+  <img src="https://github.com/Dev-axay18/TrackerSys/blob/main/assets/ChatGPT%20Image%20Jul%2023,%202025,%2012_35_43%20PM.png?raw=true" alt="TrackedIn Banner" width="100%" />
 </p>
 
 <h1 align="center">🚀 TrackedIn: Daily Tracker App</h1>
