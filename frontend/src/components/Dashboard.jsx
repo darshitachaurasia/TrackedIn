@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useUser, UserButton } from '@clerk/clerk-react';
-import { Fire, Target, TrendingUp, Calendar, Plus, Check, Clock, Share2 } from 'lucide-react';
+import { Flame, Target, TrendingUp, Calendar, Plus, Check, Clock, Share2 } from 'lucide-react';
 import TaskForm from './TaskForm';
 import NextTaskForm from './NextTaskForm';
 import LinkedInGenerator from './LinkedInGenerator';
@@ -100,7 +100,7 @@ const Dashboard = () => {
         <div className="grid md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white p-6 rounded-xl shadow-lg">
             <div className="flex items-center space-x-3">
-              <Fire className="w-8 h-8 text-orange-500" />
+<Flame className="w-8 h-8 text-orange-500" />
               <div>
                 <p className="text-gray-600">Current Streak</p>
                 <p className="text-3xl font-bold text-gray-900">{userStats?.currentStreak || 0}</p>
