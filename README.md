@@ -112,22 +112,8 @@ VITE_CLERK_PUBLISHABLE_KEY=your_key
 VITE_OPENAI_API_KEY=your_openai_key
 MONGODB_URI=your_mongodb_connection
 ```
-## 🛡️ Logo Suggestion
-
-For a professional logo, you can use a **modern shield shape** with a **progress graph icon** and the initials `TI` inside it.
-
-<p align="center">
-  <img src="https://imgur.com/YOUR_CUSTOM_LOGO.png" alt="TrackedIn Logo" width="120" />
-</p>
 
 > You can design a better one using [**Figma**](https://figma.com), [**Looka**](https://looka.com), or [**LogoMakr**](https://logomakr.com).
-
----
-
-## 🌐 Live Demo
-
-🔗 **Check out TrackedIn Live**  
-*(Optional: Add a deployment status badge if hosted via Vercel or Netlify)*
 
 ---
 
@@ -144,7 +130,7 @@ Contributions are welcome! Here’s how you can help:
 
 ## 📄 License
 
-MIT License © [Your Name](https://github.com/your-username)
+MIT License © [Your Name](https://github.com/Dev-axay18)
 
 ---
 
@@ -152,8 +138,8 @@ MIT License © [Your Name](https://github.com/your-username)
 
 If you'd like to connect, collaborate, or report bugs:
 
-📧 **Email** – yourname@example.com  
-🔗 **LinkedIn** – [Your LinkedIn](https://linkedin.com/in/your-profile)
+📧 **Email** – kaleakshay8856@gmail.com  
+
 
 
 
