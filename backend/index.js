@@ -3,7 +3,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import { requireAuth } from '@clerk/express';
-import userRoutes from './routes/user.js';
+//import userRoutes from './routes/user.js';
 import connectDB from './db.js';
 import authRoutes from './routes/auth.js';
 import checkinRoutes from './routes/checkin.js';
@@ -22,7 +22,7 @@ connectDB();
 // Use external route files
 app.use('/api/auth', authRoutes);
 app.use('/api/checkin', checkinRoutes);
-app.use('/api/user', userRoutes);
+//app.use('/api/user', userRoutes);
 
 // ------------------ Local Mock Data Setup ------------------
 // TEMP: Remove this section when MongoDB implementation is ready
