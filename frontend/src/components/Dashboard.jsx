@@ -1,10 +1,25 @@
-
 import React, { useState, useEffect } from 'react';
 import { useUser, UserButton } from '@clerk/clerk-react';
 import { Flame, Target, TrendingUp, Calendar, Plus, Check, Clock, Share2 } from 'lucide-react';
 import TaskForm from './TaskForm';
 import NextTaskForm from './NextTaskForm';
 import LinkedInGenerator from './LinkedInGenerator';
+
+// ✅ moved outside
+export function getStreak() {
+  const savedStreak = parseInt(localStorage.getItem("streak") || "0", 10);
+  const lastDate = localStorage.getItem("lastDate");
+  const today = new Date().toDateString();
+
+  if (lastDate === today) return savedStreak;
+
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (lastDate === yesterday.toDateString()) return savedStreak;
+
+  return 0; // reset if gap
+}
 
 const Dashboard = () => {
   const { user } = useUser();
@@ -25,6 +40,7 @@ const Dashboard = () => {
 
   const fetchUserStats = async () => {
     try {
+      // ⚡ adjust route if backend still has `/profile`
       const response = await fetch(`http://localhost:5000/api/user/${user.id}`);
       const data = await response.json();
       setUserStats(data);
@@ -100,7 +116,7 @@ const Dashboard = () => {
         <div className="grid md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white p-6 rounded-xl shadow-lg">
             <div className="flex items-center space-x-3">
-<Flame className="w-8 h-8 text-orange-500" />
+              <Flame className="w-8 h-8 text-orange-500" />
               <div>
                 <p className="text-gray-600">Current Streak</p>
                 <p className="text-3xl font-bold text-gray-900">{userStats?.currentStreak || 0}</p>
@@ -152,7 +168,7 @@ const Dashboard = () => {
                       <h3 className="text-xl font-semibold text-gray-900 mb-2">{todayTask.title}</h3>
                       <p className="text-gray-600 mb-3">{todayTask.description}</p>
                       <div className="flex flex-wrap gap-2">
-                        {todayTask.tags.map((tag, index) => (
+                        {todayTask.tags?.map((tag, index) => (
                           <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
                             #{tag}
                           </span>
@@ -210,7 +226,7 @@ const Dashboard = () => {
                   <h4 className="font-medium text-gray-900 mb-2">{nextTask.title}</h4>
                   <p className="text-gray-600 text-sm mb-3">{nextTask.description}</p>
                   <div className="flex flex-wrap gap-1">
-                    {nextTask.tags.map((tag, index) => (
+                    {nextTask.tags?.map((tag, index) => (
                       <span key={index} className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">
                         #{tag}
                       </span>

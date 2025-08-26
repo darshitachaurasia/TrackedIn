@@ -35,7 +35,7 @@ app.get('/', (req, res) => {
 });
 
 // Get user profile and streak
-app.get('/api/user/:userId/profile', (req, res) => {
+app.get('/api/user/:userId', (req, res) => {
   const { userId } = req.params;
   
   if (!users[userId]) {

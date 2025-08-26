@@ -6,24 +6,24 @@ import {
   Settings,
   HelpCircle,
   Search,
-} from 'lucide-react';
+} from "lucide-react";
 
 const Sidebar = () => {
   return (
     <aside className="h-screen w-64 bg-zinc-900 text-zinc-100 flex flex-col justify-between p-4">
       {/* Top Section */}
       <div>
-        <div className="text-xl font-bold mb-8"> User.</div>
+        <div className="text-xl font-bold mb-8">User.</div>
 
         <nav className="space-y-2">
           <SidebarItem icon={<LayoutDashboard />} label="Dashboard" />
-          <SidebarItem icon={<BarChart3 />} label='Streak' />
+          <SidebarItem icon={<BarChart3 />} label="Streak" />
           <SidebarItem icon={<FolderKanban />} label="Analytics" />
           <SidebarItem icon={<Users />} label="Task" />
-          
+
           <div className="mt-6 border-t border-zinc-700 pt-4 space-y-2">
             <SidebarItem icon={<FolderKanban />} label="Team" />
-            <SidebarItem icon={<BarChart3 />} label="ai agent" />
+            <SidebarItem icon={<BarChart3 />} label="AI Agent" />
             <SidebarItem icon={<Search />} label="Word Assistant" />
             <SidebarItem icon={<Users />} label="More" />
           </div>
@@ -41,7 +41,7 @@ const Sidebar = () => {
 
 const SidebarItem = ({ icon, label }) => (
   <div className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-zinc-800 cursor-pointer text-sm">
-    <span>{icon}</span>
+    <span className="text-lg">{icon}</span>
     <span>{label}</span>
   </div>
 );

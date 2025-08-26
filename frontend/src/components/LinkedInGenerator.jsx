@@ -7,26 +7,28 @@ const LinkedInGenerator = ({ task, userStats, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const generatePost = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('http://localhost:5000/api/generate-linkedin-post', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          task,
-          userProgress: userStats
-        })
-      });
+ const generatePost = async () => {
+  try {
+    const response = await fetch("http://localhost:5000/api/generate-linkedin-post", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        task,
+        userProgress: userStats
+      }),
+    });
 
-      const data = await response.json();
-      setGeneratedPost(data.post);
-    } catch (error) {
-      console.error('Error generating LinkedIn post:', error);
-    } finally {
-      setLoading(false);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  };
+
+    const data = await response.json();
+    setGeneratedPost(data.post); // 👈 update state
+  } catch (err) {
+    console.error("Error generating LinkedIn post:", err);
+  }
+};
+
 
   const copyToClipboard = async () => {
     try {

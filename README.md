@@ -134,11 +134,7 @@ MIT License © [Your Name](https://github.com/Dev-axay18)
 
 ---
 
-## 🙌 Support / Contact
 
-If you'd like to connect, collaborate, or report bugs:
-
-📧 **Email** – kaleakshay8856@gmail.com  
 
 
 
