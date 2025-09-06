@@ -7,6 +7,7 @@ import { requireAuth } from '@clerk/express';
 import connectDB from './db.js';
 import authRoutes from './routes/auth.js';
 import checkinRoutes from './routes/checkin.js';
+import adminRoutes from './routes/admin.js';
 
 dotenv.config();
 
@@ -23,6 +24,8 @@ connectDB();
 app.use('/api/auth', authRoutes);
 app.use('/api/checkin', checkinRoutes);
 //app.use('/api/user', userRoutes);
+app.use('/api/admin', adminRoutes);
+
 
 // ------------------ Local Mock Data Setup ------------------
 // TEMP: Remove this section when MongoDB implementation is ready

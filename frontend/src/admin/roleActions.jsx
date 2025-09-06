@@ -1,16 +1,19 @@
-// roleActions.js
-import { clerkClient } from '@clerk/clerk-react';
+// frontend/src/admin/roleActions.js
 
 /**
- * Assigns a role to a user by updating their publicMetadata.
+ * Assigns a role to a user by calling the backend API.
  * @param {string} userId - The ID of the Clerk user.
  * @param {string} role - The role to assign (e.g., 'admin', 'moderator').
  */
 export async function setRole(userId, role) {
   try {
-    await clerkClient.users.updateUserMetadata(userId, {
-      publicMetadata: { role },
+    const res = await fetch(`/api/admin/users/${userId}/role`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role }),
     });
+
+    if (!res.ok) throw new Error("Failed to set role");
     alert(`Role "${role}" assigned successfully!`);
   } catch (error) {
     console.error("Error setting role:", error);
@@ -19,14 +22,18 @@ export async function setRole(userId, role) {
 }
 
 /**
- * Removes the role from a user by clearing the role field in publicMetadata.
+ * Removes the role from a user by calling the backend API.
  * @param {string} userId - The ID of the Clerk user.
  */
 export async function removeRole(userId) {
   try {
-    await clerkClient.users.updateUserMetadata(userId, {
-      publicMetadata: { role: null },
+    const res = await fetch(`/api/admin/users/${userId}/role`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: null }),
     });
+
+    if (!res.ok) throw new Error("Failed to remove role");
     alert("Role removed successfully!");
   } catch (error) {
     console.error("Error removing role:", error);

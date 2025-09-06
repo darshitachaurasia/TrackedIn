@@ -1,33 +1,35 @@
-import express from 'express';
-import { clerkMiddleware, requireAuth, getAuth } from '@clerk/express';
-import { clerkClient } from '@clerk/express'; // use clerk SDK for metadata
-import createRouteMatcher from 'path-to-route-matcher'; // implement similar pattern
+import express from "express";
+import { clerkMiddleware, getAuth } from "@clerk/express";
 
 const app = express();
-app.use(express.json());
-app.use(clerkMiddleware());
 
-/**
- * Simulated Next.js createRouteMatcher logic:
- * checks if a path matches any of the patterns
- */
+app.use(express.json());
+app.use(clerkMiddleware()); // attach Clerk auth to req
+
+// Check if request path is /admin or starts with /admin
 const isAdminRoute = (path) => /^\/admin(.*)/.test(path);
 
-app.use(async (req, res, next) => {
+app.use((req, res, next) => {
   if (isAdminRoute(req.path)) {
-    try {
-      await requireAuth()(req, res, async () => {
-        const auth = getAuth(req);
-        const role = auth.sessionClaims?.metadata?.role;
-        if (role !== 'admin') {
-          return res.redirect('/');
-        }
-        next();
-      });
-    } catch (err) {
-      return res.redirect('/');
+    const { userId, sessionClaims } = getAuth(req);
+
+    // Not logged in
+    if (!userId) {
+      return res.redirect("/");
     }
-  } else {
-    next();
+
+    // Check role from session claims or metadata
+    const role = sessionClaims?.metadata?.role;
+    if (role !== "admin") {
+      return res.redirect("/");
+    }
   }
+  next();
 });
+
+// Example protected route
+app.get("/admin/dashboard", (req, res) => {
+  res.json({ message: "Welcome, Admin!" });
+});
+
+export default app;

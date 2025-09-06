@@ -7,7 +7,7 @@ import Login from './pages/SignInPage'; // Assuming you have a Login component
 import Signup from './pages/SignUpPage'; // Assuming you have a Signup component
 // import NotFound from './pages'; // Optional but recommended
 import DashboardLayout from './components/DashboardLayout';
-import AdminDashboard from './admin/page';
+import AdminDashboard from './admin/AdminDashboard';
 const MainApp = () => {
   return (
     <Routes>
