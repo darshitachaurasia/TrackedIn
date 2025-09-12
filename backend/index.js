@@ -8,7 +8,8 @@ import connectDB from './db.js';
 import authRoutes from './routes/auth.js';
 import checkinRoutes from './routes/checkin.js';
 import adminRoutes from './routes/admin.js';
-
+import { clerkMiddleware } from '@clerk/express';
+import taskRouter from './routes/tasks.js'
 dotenv.config();
 
 const app = express();
@@ -17,6 +18,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
 app.use(express.json());
 
+app.use(clerkMiddleware());
 // Connect to MongoDB
 connectDB();
 
@@ -30,7 +32,6 @@ app.use('/api/admin', adminRoutes);
 // ------------------ Local Mock Data Setup ------------------
 // TEMP: Remove this section when MongoDB implementation is ready
 let users = {};
-let tasks = {};
 
 // Base route
 app.get('/', (req, res) => {
@@ -66,6 +67,12 @@ app.get('/api/user/:userId', (req, res) => {
     } else {
       users[userId].currentStreak = 1;
     }
+if (!users[userId].daysActive) users[userId].daysActive = 0;
+
+// If logging in a new day, increment
+if (lastLogin !== today) {
+  users[userId].daysActive += 1;
+}
 
     users[userId].longestStreak = Math.max(users[userId].longestStreak, users[userId].currentStreak);
     users[userId].lastLoginDate = new Date().toISOString();
@@ -74,100 +81,60 @@ app.get('/api/user/:userId', (req, res) => {
   res.json(users[userId]);
 });
 
-// Get today's task
-app.get('/api/tasks/:userId/today', (req, res) => {
-  const { userId } = req.params;
-  const today = new Date().toDateString();
-  const todayTask = tasks[`${userId}-${today}`] || null;
-  res.json(todayTask);
-});
 
-// Create or update today's task
-app.post('/api/tasks/:userId/today', (req, res) => {
-  const { userId } = req.params;
-  const { title, description, tags } = req.body;
-  const today = new Date().toDateString();
+app.use('/api/tasks',taskRouter)
 
-  const task = {
-    id: `${userId}-${today}`,
-    userId,
-    title,
-    description,
-    tags: tags || [],
-    status: 'in-progress',
-    date: today,
-    createdAt: new Date().toISOString()
-  };
-
-  tasks[`${userId}-${today}`] = task;
-  res.json(task);
-});
-
-// Update today's task status
-app.patch('/api/tasks/:userId/today/status', (req, res) => {
-  const { userId } = req.params;
-  const { status } = req.body;
-  const today = new Date().toDateString();
-
-  if (tasks[`${userId}-${today}`]) {
-    tasks[`${userId}-${today}`].status = status;
-    res.json(tasks[`${userId}-${today}`]);
-  } else {
-    res.status(404).json({ error: 'Task not found' });
-  }
-});
-
-// Get next day's task
-app.get('/api/tasks/:userId/next', (req, res) => {
-  const { userId } = req.params;
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toDateString();
-
-  const nextTask = tasks[`${userId}-${tomorrowStr}`] || null;
-  res.json(nextTask);
-});
-
-// Set next day's task
-app.post('/api/tasks/:userId/next', (req, res) => {
-  const { userId } = req.params;
-  const { title, description, tags } = req.body;
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toDateString();
-
-  const task = {
-    id: `${userId}-${tomorrowStr}`,
-    userId,
-    title,
-    description,
-    tags: tags || [],
-    status: 'planned',
-    date: tomorrowStr,
-    createdAt: new Date().toISOString()
-  };
-
-  tasks[`${userId}-${tomorrowStr}`] = task;
-  res.json(task);
-});
 
 // Generate LinkedIn post
 app.post('/api/generate-linkedin-post', async (req, res) => {
   const { task, userProgress } = req.body;
 
+  if (!task || !task.title || !userProgress) {
+    return res.status(400).json({ error: "Invalid request: missing task or userProgress" });
+  }
+
   const mockPost = `🚀 Day ${userProgress.currentStreak} of my productivity journey!
 
 Today I focused on: ${task.title}
 
-${task.description}
+${task.description || ""}
 
 Building consistent habits one day at a time. 
-${task.tags.map(tag => `#${tag}`).join(' ')} #productivity #consistency #growth
+${(task.tags || []).map(tag => `#${tag}`).join(' ')} #productivity #consistency #growth
 
 What are you working on today? 💪`;
 
   res.json({ post: mockPost });
 });
+app.post('/api/generate-linkedin-post/summary', async (req, res) => {
+  const { tasks, userProgress } = req.body;
+
+  if (!Array.isArray(tasks) || tasks.length === 0 || !userProgress) {
+    return res.status(400).json({ error: "Invalid request: missing tasks or userProgress" });
+  }
+
+  // Format all tasks into bullet points
+  const taskSummaries = tasks
+    .map((t, idx) => `• ${t.title}${t.description ? ` — ${t.description}` : ""}`)
+    .join("\n");
+
+  // Collect tags from all tasks
+  const allTags = tasks.flatMap((t) => t.tags || []);
+  const uniqueTags = [...new Set(allTags)];
+
+  const mockPost = `🚀 Day ${userProgress.currentStreak} of my productivity journey!  
+
+Here’s what I accomplished today:  
+${taskSummaries}  
+
+Building consistent habits one day at a time.  
+${uniqueTags.map(tag => `#${tag}`).join(' ')} #productivity #consistency #growth  
+
+What are you working on today? 💪`;
+
+  res.json({ post: mockPost });
+});
+
 
 // ------------------ End of Local Mock Setup ------------------
 

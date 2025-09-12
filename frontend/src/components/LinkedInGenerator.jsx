@@ -1,34 +1,48 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Copy, Check } from 'lucide-react';
 
-const LinkedInGenerator = ({ task, userStats, onClose }) => {
+const LinkedInGenerator = ({ tasks = [],task, userStats, onClose }) => {
   const [generatedPost, setGeneratedPost] = useState('');
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+ 
+  const generatePost = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("http://localhost:5000/api/generate-linkedin-post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task, userProgress: userStats }),
+      });
 
- const generatePost = async () => {
-  try {
-    const response = await fetch("http://localhost:5000/api/generate-linkedin-post", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        task,
-        userProgress: userStats
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      setGeneratedPost(data.post || "⚠️ No post generated");
+    } catch (err) {
+      console.error("Error generating LinkedIn post:", err);
+      setGeneratedPost("⚠️ Failed to generate post");
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const data = await response.json();
-    setGeneratedPost(data.post); // 👈 update state
-  } catch (err) {
-    console.error("Error generating LinkedIn post:", err);
-  }
-};
+  const generateSummaryPost = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("http://localhost:5000/api/generate-linkedin-post/summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tasks, userProgress: userStats }),
+      });
 
+      const data = await response.json();
+      setGeneratedPost(data.post || "⚠️ No summary post generated");
+    } catch (err) {
+      console.error("Error generating LinkedIn summary post:", err);
+      setGeneratedPost("⚠️ Failed to generate summary post");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const copyToClipboard = async () => {
     try {
@@ -40,7 +54,8 @@ const LinkedInGenerator = ({ task, userStats, onClose }) => {
     }
   };
 
-  React.useEffect(() => {
+  // Default: generate a normal post on mount
+  useEffect(() => {
     generatePost();
   }, []);
 
@@ -66,12 +81,12 @@ const LinkedInGenerator = ({ task, userStats, onClose }) => {
           <div className="space-y-4">
             <div className="bg-gray-50 rounded-lg p-4">
               <h3 className="text-sm font-medium text-gray-700 mb-2">Generated Post:</h3>
-              <div className="bg-white rounded-lg p-4 border whitespace-pre-wrap">
+              <div className="bg-white rounded-lg p-4 border whitespace-pre-wrap min-h-[100px]">
                 {generatedPost}
               </div>
             </div>
 
-            <div className="flex space-x-3">
+            <div className="flex flex-wrap gap-3">
               <button
                 onClick={copyToClipboard}
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -83,7 +98,13 @@ const LinkedInGenerator = ({ task, userStats, onClose }) => {
                 onClick={generatePost}
                 className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                Regenerate
+                Regenerate Daily Post
+              </button>
+              <button
+                onClick={generateSummaryPost}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Generate Summary Post
               </button>
               <button
                 onClick={onClose}

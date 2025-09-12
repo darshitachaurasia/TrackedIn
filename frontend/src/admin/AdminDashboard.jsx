@@ -1,114 +1,190 @@
+// src/components/AdminDashboard.jsx
 import React, { useEffect, useState } from "react";
-import { useUser } from "@clerk/clerk-react";
-import { useNavigate, useLocation } from "react-router-dom";
-import SearchUsers from "./SearchUsers";
-import { setRole, removeRole } from "./RoleActions";
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@clerk/clerk-react"; // 🔑 import Clerk auth
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
 
-export default function AdminDashboard() {
-  const { isSignedIn, user } = useUser();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [query, setQuery] = useState(new URLSearchParams(location.search).get("search") || "");
+const AdminDashboard = () => {
+  const { getToken } = useAuth(); // 🔑 get Clerk token
   const [users, setUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [updatingUser, setUpdatingUser] = useState(null);
+  const [signUpId, setSignUpId] = useState("");
+  const [approving, setApproving] = useState(false);
 
-  // Redirect non-admin users
+  // Fetch users on mount
   useEffect(() => {
-    if (!isSignedIn || user?.publicMetadata?.role !== "admin") {
-      navigate("/", { replace: true });
-    }
-  }, [isSignedIn, user, navigate]);
-
-  //if admin , navigate to /admin
-  useEffect(() => {
-    if (isSignedIn && user?.publicMetadata?.role === "admin") {
-      navigate("/admin", { replace: true });
-    }
-  }, [isSignedIn, user, navigate]);
-
-  // Fetch users from backend
-  useEffect(() => {
-    async function fetchUsers() {
-      if (query) {
-        const res = await fetch(`/api/admin/users?search=${encodeURIComponent(query)}`);
-        if (res.ok) {
-          const data = await res.json();
-          setUsers(data);
-        } else {
-          setUsers([]);
-        }
-      } else {
-        setUsers([]);
-      }
-    }
     fetchUsers();
-  }, [query]);
+  }, []);
 
-  const handleSearch = (q) => {
-    setQuery(q);
-    navigate(`?search=${encodeURIComponent(q)}`, { replace: true });
+  const fetchUsers = async () => {
+    try {
+      setLoadingUsers(true);
+      const token = await getToken(); // ✅ Clerk token
+      const res = await fetch("http://localhost:5000/api/admin/users", {
+        headers: {
+          Authorization: `Bearer ${token}`, // ✅ attach token
+        },
+      });
+
+      if (!res.ok) throw new Error("Failed to fetch users");
+      const data = await res.json();
+      setUsers(data);
+    } catch (err) {
+      console.error("Error fetching users:", err);
+      setUsers([]); // fallback to empty
+    } finally {
+      setLoadingUsers(false);
+    }
   };
 
-  if (!isSignedIn) return <div className="text-center mt-10">Please sign in to access admin dashboard.</div>;
+  const updateRole = async (userId, role) => {
+    try {
+      setUpdatingUser(userId);
+      const token = await getToken();
+      const res = await fetch(
+        `http://localhost:5000/api/admin/users/${userId}/role`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`, // ✅ attach token
+          },
+          body: JSON.stringify({ role }),
+        }
+      );
+
+      if (!res.ok) throw new Error("Failed to update role");
+      await fetchUsers();
+    } catch (err) {
+      console.error("Error updating role:", err);
+    } finally {
+      setUpdatingUser(null);
+    }
+  };
+
+  const approveSignup = async () => {
+    if (!signUpId) return;
+    try {
+      setApproving(true);
+      const token = await getToken();
+      const res = await fetch(
+        `http://localhost:5000/api/admin/signups/${signUpId}/approve`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`, // ✅ attach token
+          },
+        }
+      );
+      if (!res.ok) throw new Error("Failed to approve signup");
+      await res.json();
+      alert("Signup approved ✅");
+      setSignUpId("");
+    } catch (err) {
+      console.error("Error approving signup:", err);
+      alert("Failed to approve signup ❌");
+    } finally {
+      setApproving(false);
+    }
+  };
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
+    <div className="p-6 max-w-5xl mx-auto space-y-6">
+      {/* Users Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Admin Dashboard</CardTitle>
-          <p className="text-muted-foreground">
-            Restricted to users with the <code className="bg-muted px-1 rounded">admin</code> role.
-          </p>
+          <CardTitle>Manage Users</CardTitle>
         </CardHeader>
         <CardContent>
-          <SearchUsers onSearch={handleSearch} />
+          {loadingUsers ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {users.map((user) => (
+                <div
+                  key={user.id}
+                  className="flex items-center justify-between border-b pb-3"
+                >
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {user.firstName} {user.lastName}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {user.emailAddresses?.[0]?.emailAddress}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Role: {user.publicMetadata?.role || "user"}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Select
+                      defaultValue={user.publicMetadata?.role || "user"}
+                      onValueChange={(value) => updateRole(user.id, value)}
+                      disabled={updatingUser === user.id}
+                    >
+                      <SelectTrigger className="w-[120px]">
+                        <SelectValue placeholder="Role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {updatingUser === user.id && (
+                      <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      <div className="space-y-4">
-        {users.length === 0 ? (
-          <p className="text-muted-foreground text-center">No users found. Try searching.</p>
-        ) : (
-          users.map((u) => (
-            <Card key={u.id} className="shadow-sm hover:shadow-md transition rounded-2xl">
-              <CardContent className="flex items-center justify-between py-4">
-                <div className="space-y-1">
-                  <p className="font-medium text-lg">
-                    {u.firstName} {u.lastName}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {u.emailAddresses.find((e) => e.id === u.primaryEmailAddressId)?.emailAddress}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <Badge variant={u.publicMetadata?.role ? "default" : "secondary"}>
-                    {u.publicMetadata?.role ?? "no role"}
-                  </Badge>
-
-                  <Separator orientation="vertical" className="h-6" />
-
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => setRole(u.id, "admin")}>
-                      Make Admin
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => setRole(u.id, "moderator")}>
-                      Make Moderator
-                    </Button>
-                    <Button size="sm" variant="destructive" onClick={() => removeRole(u.id)}>
-                      Remove Role
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+      {/* Approve Signup Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Approve Signups</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-3">
+            <Input
+              placeholder="Enter SignUp ID"
+              value={signUpId}
+              onChange={(e) => setSignUpId(e.target.value)}
+            />
+            <Button onClick={approveSignup} disabled={approving}>
+              {approving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Approve"
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
-}
+};
+
+export default AdminDashboard;
