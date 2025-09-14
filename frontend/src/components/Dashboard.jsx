@@ -8,8 +8,10 @@ import { TaskItem } from "./TaskItem";
 import { AddTaskForm } from "./AddTaskForm";
 import { InteractiveCalendar } from "./InteractiveCalendar";
 import { Button } from "@/components/ui/button";
-
+import { deleteSingleTask } from "../services/tasks";
+import { toast } from "react-hot-toast";
 // 🔌 import backend services
+import { getStreak, doCheckin } from "../services/streak";
 import {
   getTodayTasks,
   updateTaskStatus,
@@ -29,7 +31,59 @@ const Dashboard = () => {
 
   useEffect(() => {
     loadTasks();
+    loadStreak();
   }, []);
+  async function loadStreak() {
+  try {
+    const data = await getStreak(getToken);
+    setUserStats((prev) => ({
+      ...prev,
+      currentStreak: data.currentStreak,
+      longestStreak: data.longestStreak,
+      lastCheckin: data.lastCheckin, // ✅ keep last check-in
+    }));
+  } catch (err) {
+    console.error("Error loading streak:", err);
+  }
+}
+
+const handleCheckin = async () => {
+  try {
+    const lastCheckinDate = userStats?.lastCheckin
+      ? new Date(userStats.lastCheckin).toDateString()
+      : null;
+    const today = new Date().toDateString();
+
+    if (lastCheckinDate === today) {
+      toast.error("🔥 Already checked in today!");
+      return;
+    }
+
+    // Call API
+    const data = await doCheckin();
+
+    setUserStats((prev) => ({
+      ...prev,
+      currentStreak: data.currentStreak,
+      longestStreak: data.longestStreak,
+      lastCheckin: data.lastCheckin, // ✅ update lastCheckin
+    }));
+
+    toast.success("✅ Check-in successful!");
+  } catch (error) {
+    console.error("Error during checkin:", error);
+    toast.error("Something went wrong. Try again!");
+  }
+};
+async function handleDeleteTask(taskId) {
+  try {
+    await deleteSingleTask(getToken, taskId);
+    setTasks((prev) => prev.filter((t) => t._id !== taskId));
+    toast.success("🗑️ Task deleted");
+  } catch (err) {
+    console.error("Error deleting task:", err);
+    toast.error("Failed to delete task");
+  }}
 
   async function loadTasks() {
     try {
@@ -100,6 +154,17 @@ const Dashboard = () => {
             icon={<Flame />}
             variant={userStats?.currentStreak > 0 ? "zen" : "default"}
           />
+          <Button
+  onClick={handleCheckin}
+  disabled={
+    new Date(userStats?.lastCheckin).toDateString() === new Date().toDateString()
+  }
+  className="bg-gradient-to-r from-orange-500 to-red-500 text-white w-full mt-4 disabled:opacity-50"
+>
+  🔥 Daily Check-in
+</Button>
+
+
           <StatCard
             title="Total Tasks"
             value={userStats?.totalTasks || 0}

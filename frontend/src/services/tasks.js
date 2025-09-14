@@ -1,55 +1,51 @@
-const API_BASE = "http://localhost:5000/api/tasks";
+import axios from "axios";
 
-// --- Helper with Clerk token ---
-async function fetchWithAuth(getToken, url, options = {}) {
-  const token = await getToken();
+const API = "http://localhost:5000/api/tasks";
 
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      ...options.headers,
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || res.statusText);
-  }
-
-  return res.json();
-}
-
-// --- API Functions ---
+// ✅ Get today's tasks
 export async function getTodayTasks(getToken) {
-  return fetchWithAuth(getToken, `${API_BASE}/today`);
+  const token = await getToken();
+  const res = await axios.get(`${API}/today`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
 }
 
+// ✅ Add task
 export async function addTask(getToken, task) {
-  return fetchWithAuth(getToken, `${API_BASE}/today`, {
-    method: "POST",
-    body: JSON.stringify({ task }),
-  });
+  const token = await getToken();
+  const res = await axios.post(
+    `${API}/today`,
+    { task },
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return res.data;
 }
 
+// ✅ Update task status
 export async function updateTaskStatus(getToken, taskId, completed) {
-  return fetchWithAuth(getToken, `${API_BASE}/${taskId}/status`, {
-    method: "PATCH",
-    body: JSON.stringify({ completed }),
+  const token = await getToken();
+  const res = await axios.patch(
+    `${API}/${taskId}/status`,
+    { completed },
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return res.data;
+}
+// ✅ Delete single task
+export async function deleteSingleTask(getToken, taskId) {
+  const token = await getToken();
+  await axios.delete(`${API}/${taskId}`, {
+    headers: { Authorization: `Bearer ${token}` },
   });
+  return { success: true, id: taskId };
 }
 
+
+// ✅ Delete all today's tasks
 export async function deleteAllTodayTasks(getToken) {
-  return fetchWithAuth(getToken, `${API_BASE}/today/delete`, {
-    method: "DELETE",
+  const token = await getToken();
+  await axios.delete(`${API}/today`, {
+    headers: { Authorization: `Bearer ${token}` },
   });
-}
-
-export async function getTasksByDate(getToken, dateString) {
-  return fetchWithAuth(getToken, `${API_BASE}/date/${dateString}`);
-}
-
-export async function getAllTasks(getToken) {
-  return fetchWithAuth(getToken, `${API_BASE}/today/all`);
 }

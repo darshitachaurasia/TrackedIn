@@ -1,30 +1,10 @@
-// backend/routes/tasks.js
 import express from "express";
+import Task from "../models/Task.js";
 import { getAuth } from "@clerk/express";
-import mongoose from "mongoose";
 
-// --- Task Schema ---
-const taskSchema = new mongoose.Schema(
-  {
-    userId: { type: String, required: true },
-    task: { type: String, required: true },
-    completed: { type: Boolean, default: false },
-    createdAt: { type: Date, default: Date.now },
-  },
-  { collection: "tasks" }
-);
+const router = express.Router();
 
-const Task = mongoose.model("Task", taskSchema);
-
-// --- Helpers ---
-function todayTask(tasks) {
-  const today = new Date();
-  return tasks.filter(
-    (t) =>
-      new Date(t.createdAt).toDateString() === today.toDateString()
-  );
-}
-
+// 🔐 Middleware to get userId
 function requireAuth(req, res) {
   const { userId } = getAuth(req);
   if (!userId) {
@@ -34,73 +14,51 @@ function requireAuth(req, res) {
   return userId;
 }
 
-// --- Router ---
-const router = express.Router();
-
-// ✅ GET today's tasks (only signed-in user)
+// 📌 GET today's tasks
 router.get("/today", async (req, res) => {
   try {
     const userId = requireAuth(req, res);
     if (!userId) return;
 
-    const allTasks = await Task.find({ userId });
-    const tasks = todayTask(allTasks);
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
 
-    res.status(200).json(tasks);
+    const tasks = await Task.find({
+      userId,
+      createdAt: { $gte: start, $lte: end },
+    }).sort({ createdAt: -1 });
+
+    res.json(tasks);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ✅ POST create new task (for signed-in user)
+// 📌 POST new task
 router.post("/today", async (req, res) => {
   try {
     const userId = requireAuth(req, res);
     if (!userId) return;
 
     const { task } = req.body;
-    if (!task || typeof task !== "string" || task.trim().length < 1) {
+    if (!task || task.trim().length < 1) {
       return res.status(400).json({ error: "Task is required" });
     }
 
     const newTask = await Task.create({
       userId,
-      task: task.trim().toLowerCase(),
+      task: task.trim(),
     });
 
-    res.status(200).json(newTask);
+    res.json(newTask);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ✅ GET all tasks for signed-in user
-router.get("/today/all", async (req, res) => {
-  try {
-    const userId = requireAuth(req, res);
-    if (!userId) return;
-
-    const tasks = await Task.find({ userId });
-    res.status(200).json(tasks);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ✅ DELETE all tasks for signed-in user
-router.delete("/today/delete", async (req, res) => {
-  try {
-    const userId = requireAuth(req, res);
-    if (!userId) return;
-
-    await Task.deleteMany({ userId });
-    res.status(200).json({ message: "All tasks deleted" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ✅ Update task completion status (only for signed-in user)
+// 📌 PATCH update task status
 router.patch("/:taskId/status", async (req, res) => {
   try {
     const userId = requireAuth(req, res);
@@ -109,47 +67,40 @@ router.patch("/:taskId/status", async (req, res) => {
     const { taskId } = req.params;
     const { completed } = req.body;
 
-    if (typeof completed !== "boolean") {
-      return res.status(400).json({ error: "Completed must be true or false" });
-    }
-
-    const task = await Task.findOneAndUpdate(
+    const updated = await Task.findOneAndUpdate(
       { _id: taskId, userId },
       { completed },
       { new: true }
     );
 
-    if (!task) {
-      return res.status(404).json({ error: "Task not found" });
-    }
+    if (!updated) return res.status(404).json({ error: "Task not found" });
 
-    res.status(200).json(task);
+    res.json(updated);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-// ✅ GET tasks for a specific date
-router.get("/date/:date", async (req, res) => {
+
+// 📌 DELETE all today's tasks
+router.delete("/today", async (req, res) => {
   try {
     const userId = requireAuth(req, res);
     if (!userId) return;
 
-    // date format comes like "9-8-2025" or "09-08-2025"
-    const [month, day, year] = req.params.date.split("-").map(Number);
-    const start = new Date(year, month - 1, day, 0, 0, 0);
-    const end = new Date(year, month - 1, day, 23, 59, 59);
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
 
-    const tasks = await Task.find({
+    await Task.deleteMany({
       userId,
       createdAt: { $gte: start, $lte: end },
     });
 
-    res.status(200).json(tasks);
+    res.json({ message: "All today's tasks deleted" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-
-console.log("✅ tasks.js router loaded");
 
 export default router;
