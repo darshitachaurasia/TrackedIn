@@ -1,20 +1,8 @@
 // backend/routes/tasks.js
 import express from "express";
 import { getAuth } from "@clerk/express";
-import mongoose from "mongoose";
 
-// --- Task Schema ---
-const taskSchema = new mongoose.Schema(
-  {
-    userId: { type: String, required: true },
-    task: { type: String, required: true },
-    completed: { type: Boolean, default: false },
-    createdAt: { type: Date, default: Date.now },
-  },
-  { collection: "tasks" }
-);
-
-const Task = mongoose.model("Task", taskSchema);
+import { Task } from "../models/Task";
 
 // --- Helpers ---
 function todayTask(tasks) {

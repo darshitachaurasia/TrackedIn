@@ -8,8 +8,21 @@ import connectDB from './db.js';
 import authRoutes from './routes/auth.js';
 import checkinRoutes from './routes/checkin.js';
 import adminRoutes from './routes/admin.js';
-import { clerkMiddleware } from '@clerk/express';
+import { clerkMiddleware ,getAuth} from '@clerk/express';
 import taskRouter from './routes/tasks.js'
+import { Task } from './models/Task.js';
+
+// geminiClient.js
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+// Read API key from .env
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// Export a ready model
+export const gemini = genAI.getGenerativeModel({
+  model: "gemini-2.0-pro", // ✅ this is already correct
+});
+
 dotenv.config();
 
 const app = express();
@@ -30,7 +43,6 @@ app.use('/api/admin', adminRoutes);
 
 
 // ------------------ Local Mock Data Setup ------------------
-// TEMP: Remove this section when MongoDB implementation is ready
 let users = {};
 
 // Base route
@@ -67,12 +79,9 @@ app.get('/api/user/:userId', (req, res) => {
     } else {
       users[userId].currentStreak = 1;
     }
-if (!users[userId].daysActive) users[userId].daysActive = 0;
 
-// If logging in a new day, increment
-if (lastLogin !== today) {
-  users[userId].daysActive += 1;
-}
+    if (!users[userId].daysActive) users[userId].daysActive = 0;
+    users[userId].daysActive += 1; // ✅ simplified duplicate check
 
     users[userId].longestStreak = Math.max(users[userId].longestStreak, users[userId].currentStreak);
     users[userId].lastLoginDate = new Date().toISOString();
@@ -85,55 +94,63 @@ if (lastLogin !== today) {
 app.use('/api/tasks',taskRouter)
 
 
-// Generate LinkedIn post
-app.post('/api/generate-linkedin-post', async (req, res) => {
-  const { task, userProgress } = req.body;
-
-  if (!task || !task.title || !userProgress) {
-    return res.status(400).json({ error: "Invalid request: missing task or userProgress" });
-  }
-
-  const mockPost = `🚀 Day ${userProgress.currentStreak} of my productivity journey!
-
-Today I focused on: ${task.title}
-
-${task.description || ""}
-
-Building consistent habits one day at a time. 
-${(task.tags || []).map(tag => `#${tag}`).join(' ')} #productivity #consistency #growth
-
-What are you working on today? 💪`;
-
-  res.json({ post: mockPost });
-});
 app.post('/api/generate-linkedin-post/summary', async (req, res) => {
-  const { tasks, userProgress } = req.body;
+  try {
+    const { userProgress } = req.body;
 
-  if (!Array.isArray(tasks) || tasks.length === 0 || !userProgress) {
-    return res.status(400).json({ error: "Invalid request: missing tasks or userProgress" });
+    const { userId } = getAuth(req);
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    // ✅ Fetch today's tasks from MongoDB
+    const today = new Date();
+    const start = new Date(today.setHours(0, 0, 0, 0));
+    const end = new Date(today.setHours(23, 59, 59, 999));
+
+    const tasks = await Task.find({
+      userId,
+      createdAt: { $gte: start, $lte: end },
+    });
+
+    if (!Array.isArray(tasks) || tasks.length === 0 || !userProgress) {
+      return res.status(400).json({ error: "No tasks or userProgress found" });
+    }
+
+    const taskSummaries = tasks.map((t) => `⤷ ${t.task}`).join("\n");
+
+    const prompt = `
+YOU ARE A LINKEDIN CONTENT CREATOR.
+Start the post with a hook line and a rehook line but don't mention "hook" or "rehook".
+The post should be 150–200 words.
+It must:
+- Address problems faced by techies and how to face them.
+- Be relatable to technology.
+- Use storytelling tone.
+- Use bullet points, arrows, and ⤷.
+- Be raw, authentic, humanly written.
+- No symbols like **, #, - , emojis.
+- No external data or references.
+- End with a CTA (comment, DM, or a question).
+- Keep sentences short and structure clear.
+- Ensure proper spacing for readability.
+
+Here are the tasks completed today:
+${taskSummaries}
+
+Now write the LinkedIn post.
+`;
+
+    const result = await gemini.generateContent(prompt);
+    const output = result.response.text();
+    console.log("🔑 Clerk Auth Debug:", getAuth(req));
+
+    res.json({ post: output });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  // Format all tasks into bullet points
-  const taskSummaries = tasks
-    .map((t, idx) => `• ${t.title}${t.description ? ` — ${t.description}` : ""}`)
-    .join("\n");
-
-  // Collect tags from all tasks
-  const allTags = tasks.flatMap((t) => t.tags || []);
-  const uniqueTags = [...new Set(allTags)];
-
-  const mockPost = `🚀 Day ${userProgress.currentStreak} of my productivity journey!  
-
-Here’s what I accomplished today:  
-${taskSummaries}  
-
-Building consistent habits one day at a time.  
-${uniqueTags.map(tag => `#${tag}`).join(' ')} #productivity #consistency #growth  
-
-What are you working on today? 💪`;
-
-  res.json({ post: mockPost });
 });
+
 
 
 // ------------------ End of Local Mock Setup ------------------

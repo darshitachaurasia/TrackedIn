@@ -98,7 +98,7 @@ const Dashboard = () => {
               userStats?.currentStreak === 1 ? "day in a row" : "days in a row"
             }
             icon={<Flame />}
-            variant={userStats?.currentStreak > 0 ? "zen" : "default"}
+            variant={userStats?.currentStreak > 0 ? "streak" : "default"}
           />
           <StatCard
             title="Total Tasks"

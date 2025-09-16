@@ -1,48 +1,56 @@
 import React, { useState, useEffect } from 'react';
 import { X, Copy, Check } from 'lucide-react';
+import { useAuth } from "@clerk/clerk-react";   // <-- 🔑 import this
 
-const LinkedInGenerator = ({ tasks = [],task, userStats, onClose }) => {
+const LinkedInGenerator = ({ tasks = [], userStats, onClose }) => {
   const [generatedPost, setGeneratedPost] = useState('');
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+
  
-  const generatePost = async () => {
+
+const { getToken } = useAuth();
+
+async function generateSummaryPost() {
+  try {
     setLoading(true);
-    try {
-      const response = await fetch("http://localhost:5000/api/generate-linkedin-post", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task, userProgress: userStats }),
-      });
+    setGeneratedPost("");
 
-      const data = await response.json();
-      setGeneratedPost(data.post || "⚠️ No post generated");
-    } catch (err) {
-      console.error("Error generating LinkedIn post:", err);
-      setGeneratedPost("⚠️ Failed to generate post");
-    } finally {
-      setLoading(false);
+    const token = await getToken();
+
+    // Build userProgress from props (stats + tasks)
+    const userProgress = {
+      streak: userStats?.currentStreak || 0,
+      totalTasks: userStats?.totalTasks || 0,
+      completedTasks: userStats?.completedTasks || 0,
+      completionRate: userStats?.completionRate || 0,
+      taskList: tasks.map((t) => t.task), // flatten tasks into simple array
+    };
+
+    const res = await fetch("http://localhost:5000/api/generate-linkedin-post/summary", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify({ userProgress }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Error ${res.status}: ${res.statusText}`);
     }
-  };
 
-  const generateSummaryPost = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch("http://localhost:5000/api/generate-linkedin-post/summary", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tasks, userProgress: userStats }),
-      });
+    const data = await res.json();
+    setGeneratedPost(data.post || "No post generated.");
+  } catch (err) {
+    console.error("Error generating LinkedIn post:", err);
+    setGeneratedPost("⚠️ Failed to generate post. Check console.");
+  } finally {
+    setLoading(false);
+  }
+}
 
-      const data = await response.json();
-      setGeneratedPost(data.post || "⚠️ No summary post generated");
-    } catch (err) {
-      console.error("Error generating LinkedIn summary post:", err);
-      setGeneratedPost("⚠️ Failed to generate summary post");
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   const copyToClipboard = async () => {
     try {
@@ -56,7 +64,7 @@ const LinkedInGenerator = ({ tasks = [],task, userStats, onClose }) => {
 
   // Default: generate a normal post on mount
   useEffect(() => {
-    generatePost();
+    generateSummaryPost();
   }, []);
 
   return (
@@ -94,18 +102,13 @@ const LinkedInGenerator = ({ tasks = [],task, userStats, onClose }) => {
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 <span>{copied ? 'Copied!' : 'Copy to Clipboard'}</span>
               </button>
-              <button
-                onClick={generatePost}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Regenerate Daily Post
-              </button>
-              <button
-                onClick={generateSummaryPost}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Generate Summary Post
-              </button>
+             <button
+  onClick={generateSummaryPost}
+  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+>
+  Regenerate Daily Post
+</button>
+
               <button
                 onClick={onClose}
                 className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
